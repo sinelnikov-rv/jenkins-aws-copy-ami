@@ -102,7 +102,7 @@ node('master') {
 						if ( params.BUILD_ALL == true ) {
 							def regAmi = [:] 
 							for (reg in awsRegions) {
-								if (reg != AWS_REGION)
+								if (reg != AWS_REGION) {
 								sh 'AMI=$(cat build.log | grep -oP "\(\Ka[^)]*")'
 								sh 'NAME=$(cat build.log | grep -oh Dash.* | tail -n1 | cut -d ' ' -f1)'
 								command = sh (
@@ -110,6 +110,7 @@ node('master') {
 									returnStdout: true
 								)
 								regAmi.put(${reg},command)
+								}
 							}
 							regAmi.each { entry ->
 								sh 'aws ec2 wait image-available --image-ids ${entry.value} --region ${entry.key}'
