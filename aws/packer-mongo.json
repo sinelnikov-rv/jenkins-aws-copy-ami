@@ -1,0 +1,39 @@
+{
+  "variables": {
+	  "aws_region": "",
+	  "region_source_ami": ""
+  },
+  "builders": [
+    {
+      "type": "amazon-ebs",
+      "region": "{{user `aws_region`}}",
+      "source_ami": "{{user `region_source_ami`}}",
+      "instance_type": "t2.micro",
+      "ssh_username": "ubuntu",
+      "ami_name": "Dash-EC2-Mongodb-{{isotime \"2006-01-02-03-04-05\"}}",
+      "ami_groups": "all"
+    }
+  ],
+  "provisioners": [
+	  {
+                  "type": "shell",
+                  "inline": [
+                          "sudo mkdir /var/www/",
+                          "sudo chown -R ubuntu /var/www/"
+                  ]
+    },
+    {
+      "type": "shell",
+      "inline": [
+	      "mkdir /var/www/dash-rest",
+	      "sudo apt-get update",
+	      "sudo DEBIAN_FRONTEND=noninteractive apt-get -y upgrade",
+	      "sudo DEBIAN_FRONTEND=noninteractive apt-get -y install gnupg2 ca-certificates apt-utils",
+	      "sudo apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv 9DA31620334BD75D9DCB49F368818C72E52529D4",
+	      "echo 'deb [ arch=amd64 ] https://repo.mongodb.org/apt/ubuntu bionic/mongodb-org/4.0 multiverse' | sudo tee /etc/apt/sources.list.d/mongodb-org-4.0.list",
+	      "sudo apt-get update",
+	      "sudo DEBIAN_FRONTEND=noninteractive apt-get -y install mongodb-org=4.0.3 mongodb-org-server=4.0.3 mongodb-org-shell=4.0.3 mongodb-org-mongos=4.0.3 mongodb-org-tools=4.0.3 nodejs nfs-common jq"
+      ]
+    }
+  ]
+}

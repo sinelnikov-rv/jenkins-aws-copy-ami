@@ -1,0 +1,25 @@
+[{
+    "ParameterKey": "KeyName",
+    "ParameterValue": "taskcat"
+}, {
+    "ParameterKey": "BucketName",
+    "ParameterValue": "$[taskcat_random-string]"
+}, {
+    "ParameterKey": "IAMRoleName",
+    "ParameterValue": "$[taskcat_random-string]"
+}, {
+    "ParameterKey": "AvailabilityZone",
+    "ParameterValue": "$[taskcat_genaz_1]"
+}, {
+    "ParameterKey": "CoreUrl",
+    "ParameterValue": "http://ec2-100-24-32-153.compute-1.amazonaws.com"
+}, {
+    "ParameterKey": "EmailAddr",
+    "ParameterValue": "vladimir.z@twsgo.com"
+}, {
+    "ParameterKey": "OrganizationID",
+    "ParameterValue": "Intermountain_Healthcare1537825262189"
+}, {
+    "ParameterKey": "LicenseKey",
+    "ParameterValue": "w4J1)GXiXEXAv7xZVMG0gzH2rBED62"
+}]

@@ -1,0 +1,1143 @@
+{
+    "AWSTemplateFormatVersion": "2010-09-09",
+   "Mappings": {
+        "MainAMI": {
+            "us-east-1": {
+                "HVM64": "ami-0599c5444494dc7bb"
+            },
+            "us-east-2": {
+                "HVM64": "ami-0b7ac271869628653"
+            },
+            "us-west-1": {
+                "HVM64": "ami-0a305b49b9ac3f39a"
+            },
+            "us-west-2": {
+                "HVM64": "ami-04a1855ff44ca03a2"
+            },
+            "ap-south-1": {
+                "HVM64": "ami-03e9c8cb8ea6790ff"
+            },
+            "ap-northeast-1": {
+                "HVM64": "ami-08da09817d9af2e9c"
+            },
+            "ap-northeast-2": {
+                "HVM64": "ami-06e936b340f486546"
+            },
+            "ap-southeast-1": {
+                "HVM64": "ami-09eb55581d6e8e87f"
+            },
+            "ap-southeast-2": {
+                "HVM64": "ami-090efa2d82d4c7468"
+            },
+            "ca-central-1": {
+                "HVM64": "ami-05d93ed5a4eb06313"
+            },
+            "eu-central-1": {
+                "HVM64": "ami-0b8f1b2135b42da1a"
+            },
+            "eu-west-1": {
+                "HVM64": "ami-06dcb260b46246867"
+            },
+            "eu-west-2": {
+                "HVM64": "ami-07e9fbffa3c54925e"
+            },
+            "eu-west-3": {
+                "HVM64": "ami-09a0a8aebb27195a1"
+            },
+            "sa-east-1": {
+                "HVM64": "ami-08b06db0a656aa35a"
+            }
+	   },
+        "DBAMI": {
+            "us-east-1": {
+                "HVM64": "ami-0e36998e3719e86c7"
+            },
+            "us-east-2": {
+                "HVM64": "ami-07e3abb6902a65074"
+            },
+            "us-west-1": {
+                "HVM64": "ami-08f836c8b1819944f"
+            },
+            "us-west-2": {
+                "HVM64": "ami-04c2311427c1497c5"
+            },
+            "ap-south-1": {
+                "HVM64": "ami-0f16c4eb03f118984"
+            },
+            "ap-northeast-1": {
+                "HVM64": "ami-08a3cc121ba649d73"
+            },
+            "ap-northeast-2": {
+                "HVM64": "ami-0a0dc1cc0d9503b55"
+            },
+            "ap-southeast-1": {
+                "HVM64": "ami-0c81300221b6ed5e7"
+            },
+            "ap-southeast-2": {
+                "HVM64": "ami-099628008ca76fcd9"
+            },
+            "ca-central-1": {
+                "HVM64": "ami-0d340acbdd50f929d"
+            },
+            "eu-central-1": {
+                "HVM64": "ami-0ad28fda1ece9b02e"
+            },
+            "eu-west-1": {
+                "HVM64": "ami-0c50d2e35da480b97"
+            },
+            "eu-west-2": {
+                "HVM64": "ami-025fc4d0a9c80cd99"
+            },
+            "eu-west-3": {
+                "HVM64": "ami-05e082b8fb9c36824"
+            },
+            "sa-east-1": {
+                "HVM64": "ami-099aa3298160fe20f"
+            }
+        }
+    },
+    "Parameters": {
+        "KeyName": {
+            "Description": "Name of an existing EC2 key pair to enable SSH access to instances",
+            "Type": "AWS::EC2::KeyPair::KeyName",
+            "ConstraintDescription": "Must be the name of an existing EC2 KeyPair",
+            "MinLength": "1"
+        },
+	"CoreUrl": {
+		"Description": "Url of the core server, managed by template provider",
+		"Type": "String",
+		"Default": "https://core.dashsdk.com"
+	},
+	"CoreAPIVersion": {
+		"Type": "String",
+		"Default": "1.0.1-alpha.1",
+		"AllowedValues": ["1.0.1-alpha.1"]
+	},
+        "LicenseKey": {
+            "Description": "Enter your License Key",
+            "Type": "String"
+        },
+	"EmailAddr": {
+		"Description": "Enter any reachable e-mail address. Credentials to access your app will be sent there",
+		"Type": "String"
+	},
+        "OrganizationID": {
+            "Description": "Organization ID",
+            "Type": "String"
+        },
+        "VPCIDCustom": {
+            "Description": "Specify which VPC to use (will be created if left blank)",
+            "Type": "String",
+            "Default": "Create",
+            "ConstraintDescription": "Must be existing VPC id, such as vpc-18ac277d"
+        },
+        "SubnetPrivateCustom": {
+            "Type": "String",
+            "Description": "The existing subnet in your VPC where you want to deploy Primary node and database (strongly advised to not map public IP to it)",
+            "Default": "Create",
+            "ConstraintDescription": "Must be existing Subnet id, such as subnet-e19f0178"
+        },
+        "SubnetPublicCustom": {
+            "Type": "String",
+            "Description": "The existing subnet in your VPC where you want to deploy load balancer and NAT gateway (should be publicly accessible)",
+            "Default": "Create",
+            "ConstraintDescription": "Must be existing Subnet id, such as subnet-e19f0178"
+        },
+        "BucketName": {
+            "Description": "Specify S3 bucket name. Should be unique across entire AWS infrastructure",
+            "Type": "String"
+        },
+        "IAMRoleName": {
+            "Description": "Specify IAM Role name",
+            "Type": "String",
+            "ConstraintDescription": "See RoleName section in https://docs.aws.amazon.com/IAM/latest/APIReference/API_CreateRole.html for valid values",
+            "AllowedPattern": "[\\w+=,.@-]+"
+        },
+        "AvailabilityZone": {
+            "Description": "Pick an AvailabilityZone for the Primary Subnet. Public subnet will be created in here",
+            "Type": "AWS::EC2::AvailabilityZone::Name"
+        },
+        "InstanceType": {
+            "Description": "EC2 instance type",
+            "Type": "String",
+            "Default": "t2.micro",
+            "AllowedValues": [
+                "t2.micro",
+                "t2.small",
+                "t2.medium",
+                "t2.large",
+                "t2.xlarge",
+                "t2.2xlarge",
+                "t3.micro",
+                "t3.small",
+                "t3.medium",
+                "t3.large",
+                "t3.xlarge",
+                "t3.2xlarge",
+                "m3.medium",
+                "m3.large",
+                "m3.xlarge",
+                "m3.2xlarge",
+                "m4.large",
+                "m4.xlarge",
+                "m4.2xlarge",
+                "m4.4xlarge",
+                "m4.10xlarge",
+                "m5.large",
+                "m5.xlarge",
+                "m5.2xlarge",
+                "m5.4xlarge",
+                "m5.12xlarge",
+                "m5.24xlarge",
+                "c3.large",
+                "c3.xlarge",
+                "c3.2xlarge",
+                "c3.4xlarge",
+                "c3.8xlarge",
+                "c4.large",
+                "c4.xlarge",
+                "c4.2xlarge",
+                "c4.4xlarge",
+                "c4.8xlarge",
+                "c5.large",
+                "c5.xlarge",
+                "c5.2xlarge",
+                "c5.4xlarge",
+                "c5.9xlarge",
+                "c5.18xlarge",
+                "g2.2xlarge",
+                "hi1.4xlarge",
+                "hs1.8xlarge",
+                "i2.xlarge",
+                "i2.2xlarge",
+                "i2.4xlarge",
+                "i2.8xlarge",
+                "r3.large",
+                "r3.xlarge",
+                "r3.2xlarge",
+                "r3.4xlarge",
+                "r3.8xlarge"
+            ],
+            "ConstraintDescription": "Must be a valid EC2 instance type."
+        },
+        "DBInstanceType": {
+            "Description": "EC2 instance type for database",
+            "Type": "String",
+            "Default": "t2.micro",
+            "AllowedValues": [
+                "t2.micro",
+                "t2.small",
+                "t2.medium",
+                "t2.large",
+                "t2.xlarge",
+                "t2.2xlarge",
+                "t3.micro",
+                "t3.small",
+                "t3.medium",
+                "t3.large",
+                "t3.xlarge",
+                "t3.2xlarge",
+                "m3.medium",
+                "m3.large",
+                "m3.xlarge",
+                "m3.2xlarge",
+                "m4.large",
+                "m4.xlarge",
+                "m4.2xlarge",
+                "m4.4xlarge",
+                "m4.10xlarge",
+                "m5.large",
+                "m5.xlarge",
+                "m5.2xlarge",
+                "m5.4xlarge",
+                "m5.12xlarge",
+                "m5.24xlarge",
+                "c3.large",
+                "c3.xlarge",
+                "c3.2xlarge",
+                "c3.4xlarge",
+                "c3.8xlarge",
+                "c4.large",
+                "c4.xlarge",
+                "c4.2xlarge",
+                "c4.4xlarge",
+                "c4.8xlarge",
+                "c5.large",
+                "c5.xlarge",
+                "c5.2xlarge",
+                "c5.4xlarge",
+                "c5.9xlarge",
+                "c5.18xlarge",
+                "g2.2xlarge",
+                "hi1.4xlarge",
+                "hs1.8xlarge",
+                "i2.xlarge",
+                "i2.2xlarge",
+                "i2.4xlarge",
+                "i2.8xlarge",
+                "r3.large",
+                "r3.xlarge",
+                "r3.2xlarge",
+                "r3.4xlarge",
+                "r3.8xlarge"
+            ],
+            "ConstraintDescription": "Must be a valid EC2 instance type."
+        }
+    },
+    "Conditions": {
+        "UseExistingVPC": {
+            "Fn::Equals": [
+                {"Ref" : "VPCIDCustom"}, "Create"
+            ]
+        }
+    },
+    "Resources": {
+        "MongoDBRootPassword": {
+            "Type": "AWS::CloudFormation::CustomResource",
+            "Properties": {
+                "Length": 25,
+                "Punctuation": false,
+                "RDSCompatible": true,
+                "ServiceToken": {"Fn::GetAtt" : [ "GenerateRandomPassLambda" , "Arn" ]}
+            }
+        },
+	"RestMasterKey": {
+		"Type": "AWS::CloudFormation::CustomResource",
+		"Properties": {
+			"Length": 32,
+			"Punctuation": false,
+			"RDSCompatible": false,
+			"ServiceToken": {"Fn::GetAtt": ["GenerateRandomPassLambda", "Arn"]}
+		}
+	},
+	"RestJWTSecret": {
+		"Type": "AWS::CloudFormation::CustomResource",
+		"Properties": {
+			"Length": 32,
+			"Punctuation": false,
+			"RDSCompatible": false,
+			"ServiceToken": {"Fn::GetAtt": ["GenerateRandomPassLambda", "Arn"]}
+		}
+	},
+        "ExportAppURL": {
+            "Type": "AWS::CloudFormation::CustomResource",
+            "Properties": {
+                "Value": { "Fn::GetAtt" : [ "ELBLB1695V", "DNSName" ]},
+		"Email": { "Ref": "EmailAddr" },
+                "ServiceToken": {"Fn::GetAtt" : [ "ExportAppURLLambda", "Arn" ]}
+            }
+        },
+        "ExportAppURLLambda": {
+            "Type": "AWS::Lambda::Function",
+            "Properties": {
+                "Code": {"ZipFile" : { "Fn::Join" : ["", [
+"import json\n",
+"from botocore.vendored import requests\n",
+"import cfnresponse\n",
+"def handler(event, context):\n",
+"    responseValue = event['ResourceProperties']['Value']\n",
+"    responseData = {}\n",
+"    responseData['Data'] = responseValue\n",
+"    userEmail = event['ResourceProperties']['Email']\n",
+"    OrganizationID = \"", { "Ref": "OrganizationID" }, "\"", "\n",
+"    LicenseKey = \"", { "Ref": "LicenseKey" }, "\"", "\n",
+"    dashCoreUrl = \"", { "Ref": "CoreUrl" }, "\"\n",
+"    coreApiVersion = \"", { "Ref": "CoreAPIVersion" }, "\"\n",
+"    url_token = \"{}/api/{}/auth/organization/token\".format(dashCoreUrl, coreApiVersion)\n",
+"    if event['RequestType'] == 'Create':\n",
+"        headers_token = {'Cache-Control': 'no-cache', 'Content-Type': 'application/json'}\n",
+"        res_token = requests.post(url_token, auth=(OrganizationID, LicenseKey), headers=headers_token)\n",
+"        if res_token.status_code not in (200, 201):\n",
+"            try:\n",
+"                token_parsed = json.loads(res_token.text)\n",
+"                if (token_parsed['message']):\n",
+"                    errorString = token_parsed['message']\n",
+"                else:\n",
+"                    errorString = 'Unexpected behavior, contact service provider'\n",
+"            except:\n",
+"                errorString = 'Seems like your license is not valid.'\n",
+"            finally:\n",
+"                cfnresponse.send(event, context, 'SUCCESS', errorString, responseData)\n",
+"                print(errorString)\n",
+"        token_parsed = json.loads(res_token.text)\n",
+"        token = token_parsed['token']\n",
+"        url = \"{}/api/{}/environments/envvars?access_token={}\".format(dashCoreUrl, coreApiVersion, token)\n",
+"        data = [{\"key\":\"APP_ADDRESS\", \"value\": responseValue},{\"key\": \"EMAIL\", \"value\": userEmail}]\n",
+"        res_domain = requests.put(url, data=json.dumps(data), headers=headers_token)\n",
+"    cfnresponse.send(event, context, cfnresponse.SUCCESS, responseData)\n"
+]]}},
+                "Handler" : "index.handler",
+                "Role" : {"Fn::GetAtt" : [ "IAMR1CXVL" , "Arn" ]},
+                "Runtime" : "python3.6",
+                "Timeout" : 10
+            }
+        },
+        "GenerateRandomPassLambda": {
+            "Type" : "AWS::Lambda::Function",
+            "Properties" : {
+                "Code" : { "ZipFile": { "Fn::Join" : ["", [
+"import boto3\n",
+"import random\n",
+"import string\n",
+"import uuid\n",
+"import httplib\n",
+"import urlparse\n",
+"import json\n",
+"import base64\n",
+"def send_response(request, response, status=None, reason=None):\n",
+"    if status is not None:\n",
+"        response['Status'] = status\n",
+"    if reason is not None:\n",
+"        response['Reason'] = reason\n",
+"    if 'ResponseURL' in request and request['ResponseURL']:\n",
+"        url = urlparse.urlparse(request['ResponseURL'])\n",
+"        body = json.dumps(response)\n",
+"        https = httplib.HTTPSConnection(url.hostname)\n",
+"        https.request('PUT', url.path+'?'+url.query, body)\n",
+"    return response\n",
+"def lambda_handler(event, context):\n",
+"    response = {\n",
+"        'StackId': event['StackId'],\n",
+"        'RequestId': event['RequestId'],\n",
+"        'LogicalResourceId': event['LogicalResourceId'],\n",
+"        'Status': 'SUCCESS'\n",
+"    }\n",
+"    if 'PhysicalResourceId' in event:\n",
+"        response['PhysicalResourceId'] = event['PhysicalResourceId']\n",
+"    else:\n",
+"        response['PhysicalResourceId'] = str(uuid.uuid4())\n",
+"    if event['RequestType'] == 'Delete':\n",
+"        return send_response(event, response)\n",
+"    try:\n",
+"        length = int(event['ResourceProperties']['Length'])\n",
+"    except KeyError:\n",
+"        return send_response( event, response, status='FAILED', reason='Must specify a length')\n",
+"    except:\n",
+"        return send_response( event, response, status='FAILED', reason='Length not an integer')\n",
+"    try:\n",
+"        punctuation = event['ResourceProperties']['Punctuation']\n",
+"    except KeyError:\n",
+"        punctuation = False\n",
+"    try:\n",
+"        rds_compatible = event['ResourceProperties']['RDSCompatible']\n",
+"    except KeyError:\n",
+"        rds_compatible = False\n",
+"    valid_characters = string.ascii_letters+string.digits\n",
+"    if punctuation not in [False,'false','False']:\n",
+"        valid_characters = valid_characters + string.punctuation\n",
+"    if rds_compatible not in [False,'false','False']:\n",
+"        valid_characters = valid_characters.translate(None,'@/\"')\n",
+"    random_string = ''.join(random.choice(valid_characters) for i in range(length))\n",
+"    try:\n",
+"        kmsKeyId = event['ResourceProperties']['KmsKeyId']\n",
+"    except KeyError:\n",
+"        response['Data']   = { 'RandomString': random_string }\n",
+"        response['Reason'] = 'Successfully generated a random string'\n",
+"        return send_response(event, response)\n",
+"    kms = boto3.client('kms')\n",
+"    try:\n",
+"        encrypted = kms.encrypt(KeyId=kmsKeyId, Plaintext=random_string)\n",
+"    except Exception as e:\n",
+"        return send_response( event, response, status='FAILED', reason='Could not encrypt random string with KeyId {}: {}'.format(kmsKeyId,e))\n",
+"    response['Data'] = {'RandomString': random_string, 'EncryptedRandomString': base64.b64encode(encrypted['CiphertextBlob'])}\n",
+"    response['Reason'] = 'Successfully created and encrypted random string'\n",
+"    return send_response(event, response)\n"]]}},
+                "Handler" : "index.lambda_handler",
+                "Role" : {"Fn::GetAtt" : [ "IAMR1CXVL" , "Arn" ]},
+                "Runtime" : "python2.7",
+                "Timeout" : 10
+            }
+        },
+        "VPCID": {
+            "Type": "AWS::EC2::VPC",
+            "Properties": {
+                "CidrBlock": "10.0.0.0/16",
+                "InstanceTenancy": "default",
+                "EnableDnsSupport": true,
+                "EnableDnsHostnames": true
+            },
+            "Metadata": {
+                "AWS::CloudFormation::Designer": {
+                    "id": "7b5ac137-cc4b-452b-9846-d099c7661120"
+                }
+            }
+        },
+        "SubnetPrivate": {
+            "Type": "AWS::EC2::Subnet",
+            "Properties": {
+                "CidrBlock": "10.0.0.0/24",
+                "AvailabilityZone": {
+                    "Ref": "AvailabilityZone"
+                },
+                "MapPublicIpOnLaunch": false,
+                "VpcId": {
+                    "Ref": "VPCID"
+                },
+                "Tags": [
+                    {
+                        "Key": "Name",
+                        "Value": {
+                            "Ref": "AWS::StackName"
+                        }
+                    }
+                ]
+            },
+            "Metadata": {
+                "AWS::CloudFormation::Designer": {
+                    "id": "b1cd9a20-bee3-4959-8abb-95c7d8b564a6"
+                }
+            }
+        },
+        "SubnetPublic": {
+            "Type": "AWS::EC2::Subnet",
+            "Properties": {
+                "CidrBlock": "10.0.1.0/24",
+                "AvailabilityZone": {
+                    "Ref": "AvailabilityZone"
+                },
+                "MapPublicIpOnLaunch": true,
+                "VpcId": {
+                    "Ref": "VPCID"
+                },
+                "Tags": [
+                    {
+                        "Key": "Name",
+                        "Value": {
+                            "Ref": "AWS::StackName"
+                        }
+                    }
+                ]
+            },
+            "Metadata": {
+                "AWS::CloudFormation::Designer": {
+                    "id": "22fd7a70-97ff-447f-9400-8c31a61f063b"
+                }
+            }
+        },
+        "EC2Main": {
+            "Type": "AWS::EC2::Instance",
+            "Metadata": {
+                "AWS::CloudFormation::Designer": {
+                    "id": "afb01b72-df56-4371-89eb-54414c56f66d"
+                }
+            },
+            "Properties": {
+                "AvailabilityZone": {
+                    "Ref": "AvailabilityZone"
+                },
+                "DisableApiTermination": false,
+                "EbsOptimized": false,
+                "ImageId": {
+                    "Fn::FindInMap": [
+                        "MainAMI",
+                        {
+                            "Ref": "AWS::Region"
+                        },
+                        "HVM64"
+                    ]
+                },
+                "InstanceInitiatedShutdownBehavior": "stop",
+                "InstanceType": {
+                    "Ref": "InstanceType"
+                },
+                "KeyName": {
+                    "Ref": "KeyName"
+                },
+                "Monitoring": false,
+                "SubnetId": {
+                    "Fn::If": [
+                        "UseExistingVPC",
+                        {"Ref": "SubnetPrivate"},
+                        {"Ref": "SubnetPrivateCustom"}
+                    ]
+                },
+                "Tenancy": "default",
+                "SecurityGroupIds": [
+                    {
+                        "Ref": "SGMain"
+                    }
+                ],
+                "IamInstanceProfile": {
+                    "Ref": "IAMIP3IP36"
+                },
+                "Tags": [
+                    {
+                        "Key" : "Name",
+                        "Value" :  { "Fn::Join" : [" - ", [ 
+                            { "Ref": "AWS::StackName" },
+                            "EC2Main"
+                        ]]}       
+                    }
+                ],
+                "UserData": { "Fn::Base64" : { "Fn::Join" : ["", [
+                    "#!/bin/bash", "\n",
+                    "CoreUrl=", { "Ref": "CoreUrl" }, "\n",
+                    "ApiVer=", { "Ref" : "CoreAPIVersion" }, "\n",
+                    "token=$(curl -X POST $CoreUrl/api/$ApiVer/auth/organization/token -u '",
+                    { "Ref": "OrganizationID" }, ":", { "Ref": "LicenseKey" },
+                    "' -H 'Cache-Control: no-cache' -H 'Content-Type: application/json' | jq -r '.token')", "\n",
+                    "env_rest=$(curl --raw \"$CoreUrl/api/$ApiVer/environments?access_token=$token&name=dash-rest&format=bash\" | sed 's/^\"//g' | sed 's/\"$//g')", "\n",
+                    "echo -e $env_rest > /var/www/dash-rest/.env", "\n",
+                    "echo -e 'AWS_S3_BUCKET=", { "Ref" : "BucketName" }, "\\n",
+                    "'", " > /tmp/temp.file", "\n",
+                    "echo -e 'DASH_CORE_URL=", { "Ref": "CoreUrl" }, "\\n",
+                    "'", " > /tmp/temp.file", "\n",
+                    "echo -e 'AWS_REGION=", { "Ref" : "AWS::Region" }, "\\n",
+                    "'", " > /tmp/temp.file", "\n",
+                    "echo -e 'DASH_REST_MASTER_KEY=", {
+                        "Fn::GetAtt": [
+                            "RestMasterKey",
+                            "RandomString"
+                        ]
+                    }, "' > /tmp/temp.file", "\n",
+                    "echo -e 'DASH_REST_JWT_SECRET=", {
+                        "Fn::GetAtt": [
+                            "RestJWTSecret",
+                            "RandomString"
+                        ]
+                    }, "' > /tmp/temp.file", "\n",
+                    "MONGODB_URI='mongodb://root:",
+                    {
+                        "Fn::GetAtt": [
+                            "MongoDBRootPassword",
+                            "RandomString"
+                        ]
+                    }, "@" ,{
+                        "Fn::GetAtt": [
+                            "ECDB",
+                            "PrivateIp"
+                        ]
+                    }, ":27017/dash-rest?authSource=admin'", "\n",
+                    "echo MONGODB_URI=$MONGODB_URI > /tmp/temp.file", "\n",
+                    "cat /var/www/dash-rest/.env.example >> /var/www/dash-rest/.env", "\n",
+                    "cat /tmp/temp.file >> /var/www/dash-rest/.env", "\n",
+                    "su - ubuntu -c \"cd /var/www/dash-rest && npm run migrate\"", "\n",
+                    "su - ubuntu -c \"cd /var/www/dash-rest && export DEBUG='dash:*' && pm2 start . --name dash-rest --max-restarts=5 && pm2 start ./src/agenda.js --name dash-rest-agenda --max-restarts=5\"", "\n",
+                    "sed -i.bak \"s/28S9sv7xXlOHJkPJHkMXbiljc9V18dzR/", {
+                        "Fn::GetAtt": [
+                            "RestMasterKey",
+                            "RandomString"
+                        ]
+                    }, "/g\" /var/www/dash-frontend/dist/*.js", "\n",
+                    "sudo service nginx restart", "\n",
+                    "sudo mkdir /opt/scripts", "\n",
+                    "sudo chown -R ubuntu /opt/scripts", "\n",
+                    "echo -e '0 0 * * * ubuntu /opt/scripts/mongodump_s3.sh' | sudo tee --append /etc/crontab", "\n",
+                    "echo 'timestamp=$(date +\"%s\") && /usr/bin/mongodump -h ", {
+                        "Fn::GetAtt": [
+                            "ECDB",
+                            "PrivateIp"
+                        ]
+                    }, " -u root -p ", {
+                        "Fn::GetAtt": [
+                            "MongoDBRootPassword",
+                            "RandomString"
+                        ]
+                    }, " --authenticationDatabase=admin --gzip --archive=dump-$timestamp && /usr/bin/aws s3 cp dump-$timestamp s3://", {"Ref": "BucketName"}, "/dump-$timestamp' > /opt/scripts/mongodump_s3.sh", "\n",
+                    "chmod +x /opt/scripts/mongodump_s3.sh", "\n",
+                    "sudo service cron restart"
+                ]]}}
+            }
+        },
+        "ECDB": {
+            "Type": "AWS::EC2::Instance",
+            "Properties": {
+                "AvailabilityZone": {
+                    "Ref": "AvailabilityZone"
+                },
+                "ImageId": {
+                    "Fn::FindInMap": [
+                        "DBAMI",
+                        {
+                            "Ref": "AWS::Region"
+                        },
+                        "HVM64"
+                    ]
+                },
+                "KeyName": {
+                    "Ref": "KeyName"
+                },
+                "InstanceType": {
+                    "Ref": "DBInstanceType"
+                },
+                "SubnetId": {
+                    "Fn::If": [
+                        "UseExistingVPC",
+                        {"Ref": "SubnetPrivate"},
+                        {"Ref": "SubnetPrivateCustom"}
+                    ]
+                },
+                "SecurityGroupIds": [
+                    {
+                        "Ref": "SGDB"
+                    }
+                ],
+                "Tags": [
+                   {
+                        "Key" : "Name",
+                        "Value" :  { "Fn::Join" : [" - ", [ 
+                            { "Ref": "AWS::StackName" }, 
+                            "ECDB"
+                        ]]}
+                    }
+                ],
+                "UserData": { "Fn::Base64" : { "Fn::Join" : ["", [
+                    "#!/bin/bash", "\n",
+                    "CoreUrl=", { "Ref": "CoreUrl" }, "\n",
+                    "ApiVer=", { "Ref" : "CoreAPIVersion" }, "\n",
+                    "echo -e 'MONGODB_URI=mongodb://localhost/dash-rest\\nIP=localhost\\nPORT=9003\\n",
+                    "AWS_REGION=", { "Ref" : "AWS::Region" } ,"\\n",
+                    "'", " > /var/www/dash-rest/.env", "\n",
+                    "token=$(curl -X POST $CoreUrl/api/$ApiVer/auth/organization/token -u '",
+                    { "Ref": "OrganizationID" }, ":", { "Ref": "LicenseKey" },
+                    "' -H 'Cache-Control: no-cache' -H 'Content-Type: application/json' | jq -r '.token')", "\n",
+                    "env_rest=$(curl --raw \"$CoreUrl/api/$ApiVer/environments?access_token=$token&name=dash-rest&format=bash\" | sed 's/^\"//g' | sed 's/\"$//g')", "\n",
+                    "echo -e $env_rest > /var/www/dash-rest/.env", "\n",
+                    "service mongod start", "\n",
+                    "sleep 5", "\n",
+                    "mongo admin --eval \"db.getSiblingDB('dash-rest').createUser({user: 'root', pwd: '",
+                        {"Fn::GetAtt": ["MongoDBRootPassword", "RandomString"]},
+                    "', roles: [{role: \\\"dbOwner\\\", db: \\\"dash-rest\\\"}]})\"", "\n",
+                    "mongo admin --eval \"db.getSiblingDB('admin').createUser({user: 'root', pwd: '",
+                        {"Fn::GetAtt": ["MongoDBRootPassword", "RandomString"]},
+                    "', roles: [{role: \\\"dbOwner\\\", db: \\\"dash-rest\\\"}]})\"", "\n",
+                    "su - ubuntu -c \"cd /var/www/dash-rest && npm run migrate\"", "\n",
+                    "sed -i \"s/127.0.0.1/0.0.0.0/g\" /etc/mongod.conf", "\n",
+                    "sudo sh -c \"echo 'security:\\n  authorization: \"enabled\"' >> /etc/mongod.conf\"", "\n",
+                    "service mongod restart"
+                ]]}}
+            },
+            "Metadata": {
+                "AWS::CloudFormation::Designer": {
+                    "id": "906ff3f5-fc17-4fb8-8aca-6fbe70f7522b"
+                }
+            }
+        },
+        "ELBLB1695V": {
+            "Type": "AWS::ElasticLoadBalancing::LoadBalancer",
+            "Properties": {
+                "HealthCheck": {
+                    "HealthyThreshold": "2",
+                    "Interval": "30",
+                    "Target": "TCP:80",
+                    "Timeout": "10",
+                    "UnhealthyThreshold": "2"
+                },
+                "ConnectionSettings": {
+                    "IdleTimeout" : 3600
+                },
+                "Listeners": [
+                    {
+                        "InstancePort": "80",
+                        "LoadBalancerPort": "80",
+                        "Protocol": "tcp",
+                        "InstanceProtocol": "tcp"
+                    },
+                    {
+                        "InstancePort": "443",
+                        "LoadBalancerPort": "443",
+                        "Protocol": "tcp",
+                        "InstanceProtocol": "tcp"
+                    }
+                ],
+                "Subnets": [
+                    {
+                        "Fn::If": [
+                            "UseExistingVPC",
+                            {"Ref": "SubnetPublic"},
+                            {"Ref": "SubnetPublicCustom"}
+                        ]
+                    }
+                ],
+                "SecurityGroups": [
+                    {
+                        "Ref": "SGELB"
+                    }
+                ],
+                "Instances": [
+                    {
+                        "Ref": "EC2Main"
+                    }
+                ]
+            },
+            "Metadata": {
+                "AWS::CloudFormation::Designer": {
+                    "id": "48695fa5-12b1-486a-a9ea-c92da010b443"
+                }
+            }
+        },
+        "SGDB": {
+            "Type": "AWS::EC2::SecurityGroup",
+            "Properties": {
+                "GroupDescription": "Security Group for Database",
+                "SecurityGroupIngress": [
+                    {
+                        "IpProtocol": "tcp",
+                        "FromPort": 27017,
+                        "ToPort": 27017,
+                        "CidrIp": "0.0.0.0/0"
+                    }
+                ],
+                "VpcId": {
+                    "Fn::If": [
+                        "UseExistingVPC",
+                        {"Ref": "VPCID"},
+                        {"Ref": "VPCIDCustom"}
+                    ]
+                }
+            },
+            "Metadata": {
+                "AWS::CloudFormation::Designer": {
+                    "id": "effc9384-c4f1-4024-81f2-869efe4a7e6b"
+                }
+            }
+        },
+        "EC2RT4AB31": {
+            "Type": "AWS::EC2::RouteTable",
+            "Properties": {
+                "VpcId": {
+                    "Fn::If": [
+                        "UseExistingVPC",
+                        {"Ref": "VPCID"},
+                        {"Ref": "VPCIDCustom"}
+                    ]
+                }
+            },
+            "Metadata": {
+                "AWS::CloudFormation::Designer": {
+                    "id": "16326043-6bb6-4622-af69-690eaa4302f6"
+                }
+            }
+        },
+        "EC2RT4Q1H3": {
+            "Type": "AWS::EC2::RouteTable",
+            "Properties": {
+                "VpcId": {
+                    "Fn::If": [
+                        "UseExistingVPC",
+                        {"Ref": "VPCID"},
+                        {"Ref": "VPCIDCustom"}
+                    ]
+                }
+            },
+            "Metadata": {
+                "AWS::CloudFormation::Designer": {
+                    "id": "218a8039-ebb2-4f10-86bc-35b417c311f7"
+                }
+            }
+        },
+        "EC2R3XSOP": {
+            "Type": "AWS::EC2::Route",
+            "Properties": {
+                "DestinationCidrBlock": "0.0.0.0/0",
+                "RouteTableId": {
+                    "Ref": "EC2RT4AB31"
+                },
+                "NatGatewayId": {
+                    "Ref": "EC2NGY2FW"
+                }
+            },
+            "Metadata": {
+                "AWS::CloudFormation::Designer": {
+                    "id": "e82e44bc-5a2c-4ad8-a39e-f23efb0f3da3"
+                }
+            }
+        },
+        "EC2RU2DK": {
+            "Type": "AWS::EC2::Route",
+            "Properties": {
+                "DestinationCidrBlock": "0.0.0.0/0",
+                "RouteTableId": {
+                    "Ref": "EC2RT4Q1H3"
+                },
+                "GatewayId": {
+                    "Ref": "EC2IG2PWWQ"
+                }
+            },
+            "Metadata": {
+                "AWS::CloudFormation::Designer": {
+                    "id": "ebe7a498-0b97-4206-a386-b691ead24f1a"
+                }
+            }
+        },
+        "SGELB": {
+            "Type": "AWS::EC2::SecurityGroup",
+            "Properties": {
+                "GroupDescription": "Security Group for Load Balancer",
+                "SecurityGroupIngress": [
+                    {
+                        "IpProtocol": "tcp",
+                        "FromPort": 80,
+                        "ToPort": 80,
+                        "CidrIp": "0.0.0.0/0"
+                    },
+                    {
+                        "IpProtocol": "tcp",
+                        "FromPort": 443,
+                        "ToPort": 443,
+                        "CidrIp": "0.0.0.0/0"
+                    }
+                ],
+                "VpcId": {
+                    "Fn::If": [
+                        "UseExistingVPC",
+                        {"Ref": "VPCID"},
+                        {"Ref": "VPCIDCustom"}
+                    ]
+                }
+            },
+            "Metadata": {
+                "AWS::CloudFormation::Designer": {
+                    "id": "0541e351-ac32-4c56-a0f4-ad57ff4c02a5"
+                }
+            }
+        },
+        "EC2NGY2FW": {
+            "Type": "AWS::EC2::NatGateway",
+            "Properties": {
+                "AllocationId": {
+                    "Fn::GetAtt": [
+                        "EC2EIPNFRV",
+                        "AllocationId"
+                    ]
+                },
+                "SubnetId": {
+                    "Fn::If": [
+                        "UseExistingVPC",
+                        {"Ref": "SubnetPublic"},
+                        {"Ref": "SubnetPublicCustom"}
+                    ]
+                }
+            },
+            "Metadata": {
+                "AWS::CloudFormation::Designer": {
+                    "id": "d8d6c4ea-888c-47b1-8d9c-0a93804c3d1c"
+                }
+            }
+        },
+        "EC2IG2PWWQ": {
+            "Type": "AWS::EC2::InternetGateway",
+            "Properties": {},
+            "Metadata": {
+                "AWS::CloudFormation::Designer": {
+                    "id": "6569d31a-6d9f-4440-b3b9-36b0f80be844"
+                }
+            }
+        },
+        "EC2EIPNFRV": {
+            "Type": "AWS::EC2::EIP",
+            "Properties": {},
+            "Metadata": {
+                "AWS::CloudFormation::Designer": {
+                    "id": "e09c71f0-0a85-410d-aab1-9ae5b09eaa96"
+                }
+            }
+        },
+        "IAMIP3IP36": {
+            "Type": "AWS::IAM::InstanceProfile",
+            "Properties": {
+                "Path": "/",
+                "Roles": [
+                    {
+                        "Ref": "IAMR1CXVL"
+                    }
+                ]
+            },
+            "Metadata": {
+                "AWS::CloudFormation::Designer": {
+                    "id": "aee885a0-3841-4add-be6c-539f864ea204"
+                }
+            }
+        },
+        "IAMP4O4JS": {
+            "Type": "AWS::IAM::Policy",
+            "Properties": {
+                "PolicyName": "IAMP4O4JS",
+                "PolicyDocument": {
+                    "Version": "2012-10-17",
+                    "Statement": [
+                    	 {
+                        	"Effect": "Allow",
+                       		 "Action": "*",
+                       		 "Resource": "*"
+			}
+                    ]
+                },
+                "Roles": [
+                    {
+                        "Ref": "IAMR1CXVL"
+                    }
+                ]
+            },
+            "Metadata": {
+                "AWS::CloudFormation::Designer": {
+                    "id": "8584917f-f44c-47e6-9588-b0fe56e0b935"
+                }
+            }
+        },
+        "IAMR1CXVL": {
+            "Type": "AWS::IAM::Role",
+            "Properties": {
+                "AssumeRolePolicyDocument": {
+                    "Version": "2012-10-17",
+                    "Statement": [{
+                        "Effect": "Allow",
+                        "Principal": {
+                            "Service": "ec2.amazonaws.com"
+                        },
+                        "Action": [
+                            "sts:AssumeRole"
+                        ]
+                    },{
+                        "Effect": "Allow",
+                        "Principal": {
+                            "Service": "lambda.amazonaws.com"
+                        },
+                        "Action": "sts:AssumeRole"
+                    }
+                    ]
+                },
+                "Path": "/",
+                "RoleName": {
+                    "Ref": "IAMRoleName"
+                }
+            },
+            "Metadata": {
+                "AWS::CloudFormation::Designer": {
+                    "id": "a14086b7-5bed-4ff1-aa29-c5b7f9670265"
+                }
+            }
+        },
+        "S3B1BJPV": {
+            "Type": "AWS::S3::Bucket",
+            "Properties": {
+                "BucketName": {
+                    "Ref": "BucketName"
+                }
+            },
+            "Metadata": {
+                "AWS::CloudFormation::Designer": {
+                    "id": "ef63771c-fa74-49dd-8673-c1f2ac9da809"
+                }
+            }
+        },
+        "SGMain": {
+            "Type": "AWS::EC2::SecurityGroup",
+            "Properties": {
+                "GroupDescription": "Main Security Group",
+                "SecurityGroupIngress": [
+                    {
+                        "IpProtocol": "tcp",
+                        "FromPort": 80,
+                        "ToPort": 80,
+                        "CidrIp": "0.0.0.0/0"
+                    },
+                    {
+                        "IpProtocol": "tcp",
+                        "FromPort": 443,
+                        "ToPort": 443,
+                        "CidrIp": "0.0.0.0/0"
+                    }
+                ],
+                "VpcId": {
+                    "Fn::If": [
+                        "UseExistingVPC",
+                        {"Ref": "VPCID"},
+                        {"Ref": "VPCIDCustom"}
+                    ]
+                }
+            },
+            "Metadata": {
+                "AWS::CloudFormation::Designer": {
+                    "id": "82a7cf42-6c09-4f14-b6f7-aa6fc253d494"
+                }
+            }
+        },
+        "EC2SRTA27RZO": {
+            "Type": "AWS::EC2::SubnetRouteTableAssociation",
+            "Properties": {
+                "SubnetId": {
+                    "Fn::If": [
+                        "UseExistingVPC",
+                        {"Ref": "SubnetPrivate"},
+                        {"Ref": "SubnetPrivateCustom"}
+                    ]
+                },
+                "RouteTableId": {
+                    "Ref": "EC2RT4AB31"
+                }
+            },
+            "Metadata": {
+                "AWS::CloudFormation::Designer": {
+                    "id": "b05d122d-84db-4505-8ac0-bef89c77a03a"
+                }
+            }
+        },
+        "EC2SRTA3XXRN": {
+            "Type": "AWS::EC2::SubnetRouteTableAssociation",
+            "Properties": {
+                "SubnetId": {
+                    "Fn::If": [
+                        "UseExistingVPC",
+                        {"Ref": "SubnetPublic"},
+                        {"Ref": "SubnetPublicCustom"}
+                    ]
+                },
+                "RouteTableId": {
+                    "Ref": "EC2RT4Q1H3"
+                }
+            },
+            "Metadata": {
+                "AWS::CloudFormation::Designer": {
+                    "id": "bec13fdf-671c-4db5-90e4-2d41370c0d91"
+                }
+            }
+        },
+        "EC2SRTA548OX": {
+            "Type": "AWS::EC2::SubnetRouteTableAssociation",
+            "Properties": {
+                "RouteTableId": {
+                    "Ref": "EC2RT4AB31"
+                },
+                "SubnetId": {
+                    "Fn::If": [
+                        "UseExistingVPC",
+                        {"Ref": "SubnetPrivate"},
+                        {"Ref": "SubnetPrivateCustom"}
+                    ]
+                }
+            },
+            "Metadata": {
+                "AWS::CloudFormation::Designer": {
+                    "id": "66c5b8fb-4b40-4188-a854-0a9884d4384d"
+                }
+            }
+        },
+        "EC2VPCG14RXU": {
+            "Type": "AWS::EC2::VPCGatewayAttachment",
+            "Properties": {
+                "VpcId": {
+                    "Fn::If": [
+                        "UseExistingVPC",
+                        {"Ref": "VPCID"},
+                        {"Ref": "VPCIDCustom"}
+                    ]
+                },
+                "InternetGatewayId": {
+                    "Ref": "EC2IG2PWWQ"
+                }
+            },
+            "Metadata": {
+                "AWS::CloudFormation::Designer": {
+                    "id": "353f8654-3ff7-48d0-92c0-b26255c9bea9"
+                }
+            }
+        }
+    },
+    "Outputs" : {
+    "EndpointURL" : {
+      "Description" : "ELB endpoint",
+      "Value" : { "Fn::GetAtt" : [ "ELBLB1695V", "DNSName" ]}
+    }
+  }
+}

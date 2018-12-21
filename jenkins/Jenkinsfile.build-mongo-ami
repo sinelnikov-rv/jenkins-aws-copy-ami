@@ -1,0 +1,124 @@
+def repoName = 'git@github.com:sinelnikov-rv/jenkins-aws-copy-ami.git'
+def repoCreds = 'Github'
+def projectName = 'jenkins-aws-copy-ami'
+
+def awsRegions = [ 
+	'eu-west-1', 
+	'eu-west-2', 
+	'eu-west-3'
+]
+    
+def sourceAmis = [
+	'us-east-1': 'ami-0ac019f4fcb7cb7e6', 
+	'us-east-2': 'ami-0f65671a86f061fcd',
+	'us-west-1': 'ami-063aa838bd7631e0b',
+	'us-west-2': 'ami-0bbe6b35405ecebdb', 
+	'ap-south-1': 'ami-0d773a3b7bb2bb1c1', 
+	'ap-northeast-1': 'ami-07ad4b1c3af1ea214', 
+	'ap-northeast-2': 'ami-06e7b9c5e0c4dd014', 
+	'ap-southeast-1': 'ami-0c5199d385b432989', 
+	'ap-southeast-2': 'ami-07a3bd4944eb120a0', 
+	'ca-central-1': 'ami-0427e8367e3770df1', 
+	'eu-central-1': 'ami-0bdf93799014acdc4', 
+	'eu-west-1': 'ami-00035f41c82244dab', 
+	'eu-west-2': 'ami-0b0a60c0a2bd40612', 
+	'eu-west-3': 'ami-08182c55a1c188dee', 
+	'sa-east-1': 'ami-03c6239555bb12112'
+]
+
+properties([
+	parameters([
+		[
+			$class: 'GitParameterDefinition',
+			branch: '',
+			branchFilter: 'origin/(.*)',
+			defaultValue: 'development',
+			description: 'Select branch to build',
+			name: 'BRANCH_NAME',
+			quickFilterEnabled: false,
+			selectedValue: 'NONE',
+			sortMode: 'NONE',
+			tagFilter: '*',
+			type: 'PT_BRANCH'
+		],
+		choice(
+			choices: awsRegions, 
+			description: 'Select AWS region', 
+			name: 'AWS_REGION'
+		),
+		booleanParam(
+			defaultValue: false, 
+			description: 'Build AMIs for all possible regions', 
+			name: 'BUILD_ALL'
+		),
+		booleanParam(
+			defaultValue: false,
+			description: 'Make packer output machine readable and ackquire parsable artifacts. You probably don\'t need that if you are running that job manually',
+			name: 'CI_RUN'
+		)]
+	)]
+)
+
+node('master') {
+	deleteDir()
+	timestamps {
+		stage('checkout') {
+			checkout([
+				$class: "GitSCM",
+				branches: [[ name: params.BRANCH_NAME ]],
+				doGenerateSubmoduleConfigurations: false,
+				userRemoteConfigs: [[
+					credentialsId: repoCreds,
+					url: repoName,
+					poll: true
+				]]
+			])
+		}
+		stage('build ami') {
+			withCredentials([[
+				$class: 'AmazonWebServicesCredentialsBinding', 
+				accessKeyVariable: 'AWS_ACCESS_KEY_ID', 
+				credentialsId: 'e51e8b06-6c08-4011-9220-68f0979dece3', 
+				secretKeyVariable: 'AWS_SECRET_ACCESS_KEY'
+			]]) 
+			{
+				if ( params.CI_RUN == true ) {
+					command = sprintf(
+						'/home/ubuntu/packer build  -machine-readable -var \'aws_region=%1$s\' -var \'region_source_ami=%2$s\' ./aws/packer-mongo.json | tee build.log',
+						[AWS_REGION, sourceAmis[AWS_REGION]]
+					)
+					sh command
+					sh 'grep \'artifact,0,id\' build.log | cut -d, -f6 | cut -d: -f2 > ami-mongo.id'
+					sh 'if [ -s ami-mongo.id ]; then echo \'Artifact created successfully\' ; else echo \'No artifacts were created, see logs above\' && exit 1 ; fi'
+					archiveArtifacts artifacts: 'ami-mongo.id', fingerprint: true
+					sh 'cat ami-mongo.id'
+				} else {
+					ansiColor('xterm') {
+						command = sprintf(
+								'packer build -var \'aws_region=%1$s\' -var \'region_source_ami=%2$s\' ./aws/packer-mongo.json | tee build.log',
+								[AWS_REGION, sourceAmis[AWS_REGION]]
+						)
+						sh command
+						if ( params.BUILD_ALL == true ) {
+							def regAmi = [:] 
+							for (reg in awsRegions) {
+								if (reg != AWS_REGION)
+								sh 'AMI=$(cat build.log | grep -oP "\(\Ka[^)]*")'
+								sh 'NAME=$(cat build.log | grep -oh Dash.* | tail -n1 | cut -d ' ' -f1)'
+								command = sh (
+									script: 'aws ec2 copy-image --source-image-id $AMI --name $NAME --source-region ${AWS_REGION} --region ${reg}',
+									returnStdout: true
+								)
+								regAmi.put(${reg},command)
+							}
+							regAmi.each { entry ->
+								sh 'aws ec2 wait image-available --image-ids ${entry.value} --region ${entry.key}'
+								sh 'aws ec2 modify-image-attribute --launch-permission "Add=[{Group=all}]" --region ${entry.key} --image-id ${entry.value}'
+							}
+						}
+					} 
+				}
+			}
+		}
+	}
+}
