@@ -1,5 +1,5 @@
 def repoName = 'git@github.com:sinelnikov-rv/jenkins-aws-copy-ami.git'
-def repoCreds = '24377ecc-cdfa-4a71-a3d7-17df30553e63'
+def repoCreds = 'git'
 def projectName = 'jenkins-aws-copy-ami'
 
 def awsRegions = [ 
