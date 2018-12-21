@@ -78,7 +78,7 @@ node('master') {
 			withCredentials([[
 				$class: 'AmazonWebServicesCredentialsBinding', 
 				accessKeyVariable: 'AWS_ACCESS_KEY_ID', 
-				credentialsId: 'e51e8b06-6c08-4011-9220-68f0979dece3', 
+				credentialsId: 'e0702dab-4b45-4dcb-90c2-8890106392d1', 
 				secretKeyVariable: 'AWS_SECRET_ACCESS_KEY'
 			]]) 
 			{
