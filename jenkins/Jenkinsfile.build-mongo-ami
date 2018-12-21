@@ -103,10 +103,16 @@ node('master') {
 							def regAmi = [:] 
 							for (reg in awsRegions) {
 								if (reg != AWS_REGION) {
-								sh 'AMI=$(cat build.log | grep -oP "\(\Ka[^)]*")'
-								sh 'NAME=$(cat build.log | grep -oh Dash.* | tail -n1 | cut -d ' ' -f1)'
+								AMI = sh (
+									script: 'cat build.log | grep -oP "\(\Ka[^)]*")',
+									returnStdout: true
+								)
+								NAME = sh (
+									script: 'cat build.log | grep -oh Dash.* | tail -n1 | cut -d \' \' -f1',
+									returnStdout: true
+								)
 								command = sh (
-									script: 'aws ec2 copy-image --source-image-id $AMI --name $NAME --source-region ${AWS_REGION} --region ${reg}',
+									script: 'aws ec2 copy-image --source-image-id ${AMI} --name ${NAME} --source-region ${AWS_REGION} --region ${reg}',
 									returnStdout: true
 								)
 								regAmi.put(${reg},command)
