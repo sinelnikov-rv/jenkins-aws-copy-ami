@@ -100,29 +100,33 @@ node('master') {
 						sh command
 						if ( params.BUILD_ALL == true ) {
 							AMI = sh (
-									script: 'cat build.log | grep -oP \'\\(\\Ka[^)]+\'',
-									returnStdout: true
-								)
-								NAME = sh (
-									script: 'cat build.log | grep -oh Dash.* | tail -n1 | cut -d \' \' -f1',
-									returnStdout: true
-								)
-							def regAmi = [:] 
-							for (reg in awsRegions) {
-								if (reg != AWS_REGION) {
+							script: 'cat build.log | grep -oP \'\\(\\Ka[^)]+\'',
+							returnStdout: true
+            ).trim()
+						NAME = sh (
+							script: 'cat build.log | grep -oh Dash.* | tail -n1 | cut -d \' \' -f1',
+							returnStdout: true
+						).trim()
+						def regAmi = [:]
+						for (reg in awsRegions) {
+						  if (reg != AWS_REGION) {
 								command = sh (
-									script: 'aws ec2 copy-image --source-image-id ' + AMI + ' --name ' + NAME + ' --source-region ${AWS_REGION} --region ${reg}',
+								  script: "aws ec2 copy-image --source-image-id ${AMI} --name ${NAME} --source-region ${AWS_REGION} --region ${reg}",
 									returnStdout: true
-								)
-								regAmi.put(${reg},command)
-								}
-							}
-							regAmi.each { entry ->
-								sh 'aws ec2 wait image-available --image-ids ${entry.value} --region ${entry.key}'
-								sh 'aws ec2 modify-image-attribute --launch-permission "Add=[{Group=all}]" --region ${entry.key} --image-id ${entry.value}'
+								).trim()
+								regAmi.put("${reg}",command.tokenize(' ').last())
 							}
 						}
-					} 
+						regAmi.each { entry ->
+              command = sh (
+                script: "echo ${entry.key} \"}\" ${entry.value} | tee /tmp/test.txt"
+              )
+              command
+              sh "aws ec2 wait image-available --region $entry.key --image-ids $entry.value"
+              sh "aws ec2 modify-image-attribute --launch-permission \"Add=[{Group=all}]\" --region $entry.key --image-id $entry.value"
+							}
+						}
+					}
 				}
 			}
 		}
