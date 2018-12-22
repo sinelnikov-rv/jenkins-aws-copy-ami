@@ -99,10 +99,7 @@ node('master') {
 						)
 						sh command
 						if ( params.BUILD_ALL == true ) {
-							def regAmi = [:] 
-							for (reg in awsRegions) {
-								if (reg != AWS_REGION) {
-								AMI = sh (
+							AMI = sh (
 									script: 'cat build.log | grep -oP \'\\(\\Ka[^)]+\'',
 									returnStdout: true
 								)
@@ -110,6 +107,9 @@ node('master') {
 									script: 'cat build.log | grep -oh Dash.* | tail -n1 | cut -d \' \' -f1',
 									returnStdout: true
 								)
+							def regAmi = [:] 
+							for (reg in awsRegions) {
+								if (reg != AWS_REGION) {
 								command = sh (
 									script: 'aws ec2 copy-image --source-image-id ' + AMI + ' --name ' + NAME + ' --source-region ${AWS_REGION} --region ${reg}',
 									returnStdout: true
