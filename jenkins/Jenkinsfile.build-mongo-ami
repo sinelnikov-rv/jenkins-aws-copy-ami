@@ -4,8 +4,7 @@ def projectName = 'jenkins-aws-copy-ami'
 
 def awsRegions = [ 
 	'eu-west-1', 
-	'eu-west-2', 
-	'eu-west-3'
+	'eu-west-2'
 ]
     
 def sourceAmis = [
@@ -104,7 +103,7 @@ node('master') {
 							for (reg in awsRegions) {
 								if (reg != AWS_REGION) {
 								AMI = sh (
-									script: 'cat build.log | grep -oP "\\(\\Ka[^)]*\")',
+									script: 'cat build.log | grep -oP \'\(\Ka[^)]+\'',
 									returnStdout: true
 								)
 								NAME = sh (
