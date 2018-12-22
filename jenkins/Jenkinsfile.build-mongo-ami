@@ -111,7 +111,7 @@ node('master') {
 									returnStdout: true
 								)
 								command = sh (
-									script: 'aws ec2 copy-image --source-image-id ${AMI} --name ${NAME} --source-region ${AWS_REGION} --region ${reg}',
+									script: 'aws ec2 copy-image --source-image-id ' + AMI + ' --name ' + NAME + ' --source-region ${AWS_REGION} --region ${reg}',
 									returnStdout: true
 								)
 								regAmi.put(${reg},command)
