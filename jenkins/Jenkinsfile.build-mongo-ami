@@ -103,7 +103,7 @@ node('master') {
 							for (reg in awsRegions) {
 								if (reg != AWS_REGION) {
 								AMI = sh (
-									script: 'cat build.log | grep -oP \'\(\Ka[^)]+\'',
+									script: 'cat build.log | grep -oP \'\\(\\Ka[^)]+\'',
 									returnStdout: true
 								)
 								NAME = sh (
