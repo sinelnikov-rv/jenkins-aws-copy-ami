@@ -99,7 +99,7 @@ node('master') {
 						)
 						sh command
 						if ( params.BUILD_ALL == true ) {
-							AMI = sh (
+						AMI = sh (
 							script: 'cat build.log | grep -oP \'\\(\\Ka[^)]+\'',
 							returnStdout: true
             ).trim()
@@ -114,7 +114,7 @@ node('master') {
 								  script: "aws ec2 copy-image --source-image-id ${AMI} --name ${NAME} --source-region ${AWS_REGION} --region ${reg}",
 									returnStdout: true
 								).trim()
-								regAmi.put("${reg}",command.tokenize(' ').last())
+								regAmi.put("${reg}","command.tokenize(' ').last()")
 							}
 						}
 						regAmi.each { entry ->
@@ -124,8 +124,8 @@ node('master') {
               command
               sh "aws ec2 wait image-available --region $entry.key --image-ids $entry.value"
               sh "aws ec2 modify-image-attribute --launch-permission \"Add=[{Group=all}]\" --region $entry.key --image-id $entry.value"
-							}
 						}
+					}
 					}
 				}
 			}
