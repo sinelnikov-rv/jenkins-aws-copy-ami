@@ -4,7 +4,8 @@ def projectName = 'jenkins-aws-copy-ami'
 
 def awsRegions = [ 
 	'eu-west-1', 
-	'eu-west-2'
+	'eu-west-2',
+	'eu-west-3'
 ]
     
 def sourceAmis = [
@@ -111,17 +112,13 @@ node('master') {
 						for (reg in awsRegions) {
 						  if (reg != AWS_REGION) {
 								command = sh (
-								  script: "aws ec2 copy-image --source-image-id ${AMI} --name ${NAME} --source-region ${AWS_REGION} --region ${reg}",
+								  script: "aws ec2 copy-image --source-image-id ${AMI} --name ${NAME} --source-region ${AWS_REGION} --region ${reg} --output text",
 									returnStdout: true
 								).trim()
-								regAmi.put("${reg}","command.tokenize(' ').last()")
+								regAmi.put("${reg}",command)
 							}
 						}
 						regAmi.each { entry ->
-              command = sh (
-                script: "echo ${entry.key} \"}\" ${entry.value} | tee /tmp/test.txt"
-              )
-              command
               sh "aws ec2 wait image-available --region $entry.key --image-ids $entry.value"
               sh "aws ec2 modify-image-attribute --launch-permission \"Add=[{Group=all}]\" --region $entry.key --image-id $entry.value"
 						}
