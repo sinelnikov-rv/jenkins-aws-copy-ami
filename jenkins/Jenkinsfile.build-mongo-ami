@@ -94,7 +94,6 @@ node('master') {
 					sh 'cat ami-mongo.id'
 				} else {
 					ansiColor('xterm') {
-						def regAmi = [:]
 						command = sprintf(
 								'packer build -var \'aws_region=%1$s\' -var \'region_source_ami=%2$s\' ./aws/packer-mongo.json | tee build.log',
 								[AWS_REGION, sourceAmis[AWS_REGION]]
@@ -109,7 +108,7 @@ node('master') {
 							script: 'cat build.log | grep -oh Dash.* | tail -n1 | cut -d \' \' -f1',
 							returnStdout: true
 						).trim()
-						regAmi.put("${AWS_REGION}", AMI)
+						def regAmi = [:]
 						for (reg in awsRegions) {
 						  if (reg != AWS_REGION) {
 								command = sh (
